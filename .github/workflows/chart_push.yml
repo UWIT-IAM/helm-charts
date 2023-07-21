@@ -1,0 +1,23 @@
+name: Push Helm Chart to GAR
+on: workflow_dispatch
+jobs:
+  google-auth:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: 'actions/checkout@v3'
+    - uses: azure/setup-helm@v3
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: '${{ secrets.GAR_HELM_TOKEN }}'
+    # Install gcloud, `setup-gcloud` automatically picks up authentication from `auth`.
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+    - name: 'Test Helm login'
+      run: |
+        gcloud auth application-default print-access-token | helm registry login -u oauth2accesstoken \
+        --password-stdin https://us-central1-docker.pkg.dev
+    - name: 'Upload chart'
+      run: |
+        helm push charts/basic-web-service-0.3.9.tgz oci://us-central1-docker.pkg.dev/uwit-mci-iam/helm-charts-test
