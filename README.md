@@ -7,21 +7,11 @@
 You can use the included `./package-chart.sh` script which invokes
 the `helm` CLI to package your change. You must have the `helm` CLI installed.
 
+Don't forget to bump the version in `Chart.yaml`.
+
 ### Publishing your change
 
-A Github Action automatically publishes new charts, so the below steps will not need to be run manually unless something goes wrong. The action is configured to on every push to `main` (this includes merged PRs) if `Chart.yaml` has been modified.
-
-It appears to be based off of [this medium article](https://medium.com/@mattiaperi/create-a-public-helm-chart-repository-with-github-pages-49b180dbb417)
-
-```
-git fetch
-git switch gh-pages
-git rebase origin/main
-git push
-```
-
-After this, an Actions workflow will make your new chart
-version available for consumers.
+A Github Action automatically publishes new charts to Google Artifact Registry. The action runs after every push to `main` if `Chart.yaml` has been modified.
 
 ### Debugging
 
@@ -39,7 +29,7 @@ $ sha256sum charts/index.yaml
 1ae29d2f07b8a9ec52f8eb5ccc03acbf6ad86b58a9a388fd880cfe29edda1782  charts/index.yaml
 ```
 
-If they don't match check that you **actually published** by updating the `gh-pages` branch
+If they don't match, take a look at the Github Action logs to see if anything is amiss.
 
 
 #### Is the release valid?
