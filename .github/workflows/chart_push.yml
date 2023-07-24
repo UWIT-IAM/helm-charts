@@ -1,37 +1,23 @@
-name: Publish chart to registry
-on: 
-  push:
-    branches:
-      - 'main'
-    paths:
-      - 'basic-web-service/Chart.yaml'
-  workflow_dispatch: {}
+name: Push Helm Chart to GAR
+on: workflow_dispatch
 jobs:
-  publish_chart:
+  google-auth:
     runs-on: ubuntu-latest
-    env:
-      REGISTRY_HOSTNAME: "us-central1-docker.pkg.dev"
     steps:
     - uses: 'actions/checkout@v3'
-    - name: Get latest chart version number
-      run: echo "CHART_VERSION=$(cat basic-web-service/Chart.yaml | grep 'version:' | cut -d' ' -f2)" >> $GITHUB_ENV
-    - name: Check for matching archive
-      run: |
-        echo "If this step fails, we couldn't find the file 'charts/basic-web-service-${CHART_VERSION}.tgz'" && [[ -e  "charts/basic-web-service-${CHART_VERSION}.tgz" ]]
     - uses: azure/setup-helm@v3
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
       with:
-        version: 'latest'
-        token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
-    - name: 'Authenticate to Google Artifact Registry'
-      env:
-        GAR_KEY_BASE64: ${{ secrets.GAR_KEY_BASE64 }}
-        REGISTRY_URL_HTTP: "https://${{ env.REGISTRY_HOSTNAME }}"
+        credentials_json: '${{ secrets.GAR_TOKEN_TEST }}'
+    # Install gcloud, `setup-gcloud` automatically picks up authentication from `auth`.
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+    - name: 'Test Helm login'
       run: |
-        echo $GAR_KEY_BASE64 | helm registry login -u _json_key_base64 --password-stdin \
-        $REGISTRY_URL_HTTP
+        gcloud auth application-default print-access-token | helm registry login -u oauth2accesstoken \
+        --password-stdin https://us-central1-docker.pkg.dev
     - name: 'Upload chart'
-      env:
-        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test"
       run: |
-        helm push charts/basic-web-service-${CHART_VERSION}.tgz $REGISTRY_URL_OCI
-
+        helm push charts/basic-web-service-0.3.9.tgz oci://us-central1-docker.pkg.dev/uwit-mci-iam/helm-charts-test
