@@ -10,7 +10,7 @@ jobs:
   publish_chart:
     runs-on: ubuntu-latest
     env:
-      REGISTRY_HOSTNAME: "us-central1-docker.pkg.dev"
+      REGISTRY_HOSTNAME: "us-west1-docker.pkg.dev"
     steps:
     - uses: 'actions/checkout@v3'
     - name: Get latest chart version number
@@ -36,7 +36,7 @@ jobs:
         $REGISTRY_URL_HTTP
     - name: 'Check if chart version already exists in registry'
       env:
-        CHART_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test/basic-web-service"
+        CHART_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts/basic-web-service"
         ERROR_CHART_EXISTS: "::error:: basic-web-service:${{env.CHART_VERSION}} already exists in registry, did you forget to bump the version in Chart.yaml?"
       run: |
         if helm pull $CHART_URL_OCI --version $CHART_VERSION
@@ -47,6 +47,6 @@ jobs:
         fi
     - name: 'Upload chart'
       env:
-        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test"
+        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts"
       run: |
         helm push charts/basic-web-service-${CHART_VERSION}.tgz $REGISTRY_URL_OCI
