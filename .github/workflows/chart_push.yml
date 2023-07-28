@@ -36,12 +36,17 @@ jobs:
         $REGISTRY_URL_HTTP
     - name: 'Check if chart version already exists in registry'
       env:
-        CHART_URL_OCI: "oci://${{ env.REGISTRY_HOSTNAME }}/uwit-mci-iam/helm-charts-test/basic-web-service"
-        ERROR_CHART_EXISTS: "::error:: basic-web-service:${{ env.CHART_VERSION }} already exists in registry, did you forget to bump the version in Chart.yaml?"
+        CHART_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test/basic-web-service"
+        ERROR_CHART_EXISTS: "::error:: basic-web-service:${{env.CHART_VERSION}} already exists in registry, did you forget to bump the version in Chart.yaml?"
       run: |
-        helm pull $CHART_URL_OCI --version $CHART_VERSION && echo $ERROR_CHART_EXISTS && exit 1 || echo 'Uploading new chart'
+        if helm pull $CHART_URL_OCI --version $CHART_VERSION
+        then
+          echo $ERROR_CHART_EXISTS && exit 1
+        else
+          echo "::notice:: Uploading new chart with version tag $CHART_VERSION"
+        fi
     - name: 'Upload chart'
       env:
-        REGISTRY_URL_OCI: "oci://${{ env.REGISTRY_HOSTNAME }}/uwit-mci-iam/helm-charts-test"
+        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test"
       run: |
         helm push charts/basic-web-service-${CHART_VERSION}.tgz $REGISTRY_URL_OCI
