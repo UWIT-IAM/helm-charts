@@ -16,8 +16,13 @@ jobs:
     - name: Get latest chart version number
       run: echo "CHART_VERSION=$(cat basic-web-service/Chart.yaml | grep 'version:' | cut -d' ' -f2)" >> $GITHUB_ENV
     - name: Check for matching archive
+      env:
+        ERROR_MISSING_ARCHIVE: "::error:: Couldn't find the file 'charts/basic-web-service-${{ env.CHART_VERSION }}.tgz', did you run './package-chart.sh'?"
       run: |
-        echo "If this step fails, we couldn't find the file 'charts/basic-web-service-${CHART_VERSION}.tgz'" && [[ -e  "charts/basic-web-service-${CHART_VERSION}.tgz" ]]
+        if [[ ! -f  "charts/basic-web-service-${CHART_VERSION}.tgz" ]]
+        then
+          echo $ERROR_MISSING_ARCHIVE && exit 1
+        fi
     - uses: azure/setup-helm@v3
       with:
         version: 'latest'
@@ -29,9 +34,14 @@ jobs:
       run: |
         echo $GAR_KEY_BASE64 | helm registry login -u _json_key_base64 --password-stdin \
         $REGISTRY_URL_HTTP
+    - name: 'Check if chart version already exists in registry'
+      env:
+        CHART_URL_OCI: "oci://${{ env.REGISTRY_HOSTNAME }}/uwit-mci-iam/helm-charts-test/basic-web-service"
+        ERROR_CHART_EXISTS: "::error:: basic-web-service:${{ env.CHART_VERSION }} already exists in registry, did you forget to bump the version in Chart.yaml?"
+      run: |
+        helm pull $CHART_URL_OCI --version $CHART_VERSION && echo $ERROR_CHART_EXISTS && exit 1 || echo 'Uploading new chart'
     - name: 'Upload chart'
       env:
-        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/helm-charts-test"
+        REGISTRY_URL_OCI: "oci://${{ env.REGISTRY_HOSTNAME }}/uwit-mci-iam/helm-charts-test"
       run: |
         helm push charts/basic-web-service-${CHART_VERSION}.tgz $REGISTRY_URL_OCI
-
