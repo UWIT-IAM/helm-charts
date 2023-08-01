@@ -13,6 +13,14 @@ Don't forget to bump the version in `Chart.yaml`.
 
 A Github Action automatically publishes new charts to Google Artifact Registry. The action runs after every push to `main` if `Chart.yaml` has been modified.
 
+### Rotating Secrets
+
+If you need to change the key that allows Github Actions to communicate with Artifact Registry (named GAR_KEY_BASE64):
+
+1. Create and download a new JSON key in GCP
+2. Encode it as Base64 and upload in same step: `cat /path/to/keyfile.json | jq -r 'tostring' | base64 | gh secret set GAR_KEY_BASE64 --repo UWIT-IAM/helm-charts --app actions`.
+3. If you don't want to use the `gh` CLI, skip the last command and upload it to the repository manually.
+
 ### Debugging
 
 #### Did the new release get picked up by automation?
