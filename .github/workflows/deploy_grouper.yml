@@ -1,0 +1,53 @@
+name: Publish Grouper chart to registry
+
+on: 
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'basic-web-service/Chart.yaml'
+  workflow_dispatch: {}
+
+jobs:
+  publish_chart:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_HOSTNAME: "us-docker.pkg.dev"
+    steps:
+    - uses: 'actions/checkout@v3'
+    - name: Get latest chart version number
+      run: echo "CHART_VERSION=$(cat grouper/Chart.yaml | grep 'version:' | cut -d' ' -f2)" >> $GITHUB_ENV
+    - uses: azure/setup-helm@v3
+      with:
+        version: 'latest'
+        token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
+    - name: 'Build chart package if necessary'
+      run: |
+        if [[ ! -f  "charts/grouper-${CHART_VERSION}.tgz" ]]
+        then
+          helm package grouper -d charts
+          # should find a way to check in the built chart package
+        fi
+    - name: 'Authenticate to Google Artifact Registry'
+      env:
+        GAR_KEY_BASE64: ${{ secrets.GAR_KEY_BASE64 }}
+        REGISTRY_URL_HTTP: "https://${{ env.REGISTRY_HOSTNAME }}"
+      run: |
+        echo $GAR_KEY_BASE64 | helm registry login -u _json_key_base64 --password-stdin \
+        $REGISTRY_URL_HTTP
+    - name: 'Check if chart version already exists in registry'
+      env:
+        CHART_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/containers/charts/grouper"
+        ERROR_CHART_EXISTS: "::error:: grouper:${{env.CHART_VERSION}} already exists in registry, did you forget to bump the version in Chart.yaml?"
+      run: |
+        if helm pull $CHART_URL_OCI --version $CHART_VERSION
+        then
+          echo $ERROR_CHART_EXISTS && exit 1
+        else
+          echo "::notice:: Uploading new chart with version tag $CHART_VERSION"
+        fi
+    - name: 'Upload chart'
+      env:
+        REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/containers/charts"
+      run: |
+        helm push charts/grouper-${CHART_VERSION}.tgz $REGISTRY_URL_OCI

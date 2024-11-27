@@ -1,0 +1,17 @@
+name: Helm chart linter
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/set-up-helm-linter
+      - run: helm lint grouper
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.17'
+      - run: go install github.com/yannh/kubeconform/cmd/kubeconform@latest
+      - run: helm template grouper | kubeconform --summary --output json
