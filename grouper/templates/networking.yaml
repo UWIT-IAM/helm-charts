@@ -1,0 +1,75 @@
+####
+# Defines the Ingress and Services for our Grouper deployment.
+#
+# ------ Ingress ------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+  labels:
+    app.kubernetes.io/namw: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+  name: grouper-ingress
+  namespace: grouper
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: {{ .Values.hostname }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: grouper-shib-service
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ .Values.hostname }}
+    #
+    # semi-manual; use the ExternalSecret definition below to get a Mosler secret to
+    # confirm to a kubernetes.io/tls secret definition
+    #
+    secretName: {{ .Values.tlsSecretName }}
+---
+#  ------ Service ------
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+  name: grouper-shib-service
+  namespace: grouper
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app.kubernetes.io/name: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+---
+#  ------ Service ------
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+  name: grouper-app-service
+  namespace: grouper
+spec:
+  ports:
+  - name: ajp
+    port: 8009
+    protocol: TCP
+    targetPort: 8009
+  selector:
+    app.kubernetes.io/name: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+---

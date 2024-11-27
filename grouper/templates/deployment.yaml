@@ -1,0 +1,132 @@
+####
+# This is the configMap and deployment to deploy the Grouper system to our Kubernetes cluster.
+#
+#  ------ Configuration ------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grouper-configmap
+  namespace: grouper
+  labels:
+        app.kubernetes.io/name: grouper-application
+        app.kubernetes.io/instance: grouper-application-1
+data:
+    SERVER_NAME: {{ .Values.server_name }}
+    GROUPER_DB_HOST: {{ .Values.grouper_db_host }}
+    GROUPER_DB_NAME: {{ .Values.grouper_db_name }}
+    SSL_ROOT_CERT: {{ .Values.ssl_root_cert }}
+    SSL_CERT: {{ .Values.ssl_cert }}
+    SSL_KEY: {{ .Values.ssl_key }}
+    DB_SSL_PASSWORD_FILENAME: {{ .Values.db_ssl_password_filename }}
+    GROUPER_TOMCAT_AJP_PORT: {{ .Values.grouper_tomcat_ajp_port }}
+    enable-underscores-in-headers: "true"
+---
+#  ------ Deployment ------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    hello: Grouper
+  labels:
+    app.kubernetes.io/name: grouper-application
+    app.kubernetes.io/instance: grouper-application-1
+  name: grouper-deployment
+  namespace: grouper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grouper-application
+      app.kubernetes.io/instance: grouper-application-1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grouper-application
+        app.kubernetes.io/instance: grouper-application-1
+    spec:
+      # define a volume for each of our secrets
+      volumes:
+        - name: grouper-db-client-cert-to-file
+          secret:
+            secretName: grouper-db-client-cert
+            defaultMode: 0400
+        - name: grouper-db-client-key-password-to-file
+          secret:
+            secretName: grouper-db-client-key-password
+            defaultMode: 0400
+        - name: grouper-shib-keys-to-file
+          secret:
+            secretName: grouper-shib-keys
+            defaultMode: 0400
+      containers:
+        # The Apache/Shibboleth container
+        - name: grouper-shib
+          image: us-docker.pkg.dev/uwit-mci-iam/containers/{{ .Values.shibboleth_image_tag }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          # Import configuration as environment variables
+          envFrom:
+            - configMapRef:
+                name: grouper-configmap
+          # mount shib keys as files into specific locations
+          volumeMounts:
+            - mountPath: /opt/mount/shib
+              name: grouper-shib-keys-to-file
+              readOnly: true
+          command: ["/bin/bash", "-c"]
+          args:
+          - cp -p /opt/mount/shib/* /etc/shibboleth;
+            chmod 400 /etc/shibboleth/sp-cert.pem /etc/shibboleth/sp-key.pem;
+            chmod 444 /etc/shibboleth/idp-ss.crt;
+            chown shibd:shibd /etc/shibboleth/idp-ss.crt /etc/shibboleth/sp-cert.pem /etc/shibboleth/sp-key.pem;
+            /usr/local/bin/startup.sh;
+        # The Grouper container
+        - name: grouper
+          image: us-docker.pkg.dev/uwit-mci-iam/containers/{{ .Values.grouper_image_tag }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8009
+              name: http
+              protocol: TCP
+          # Import configuration as environment variables
+          envFrom:
+            - configMapRef:
+                name: grouper-configmap
+          # map specific secrets to environment variables
+          env:
+            - name: GROUPER_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: grouper-db-account
+                  key: username
+            - name: GROUPER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grouper-db-account
+                  key: password
+            - name: GROUPER_ENCRYPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: grouper-app-config
+                  key: encrypt-key
+          # mount other secrets as files into specific locations
+          volumeMounts:
+            - mountPath: /opt/mount/db
+              name: grouper-db-client-cert-to-file
+              readOnly: true
+            - mountPath: /opt/mount/dbkey
+              name: grouper-db-client-key-password-to-file
+              readOnly: true
+          command: ["/bin/bash", "-c"]
+          args:
+          - cp -p /opt/mount/db/* /opt/secrets;
+            cp -p /opt/mount/dbkey/* /opt/secrets;
+            cat /opt/secrets/client-key.der.base64 | base64 --decode > /opt/secrets/client-key.der;
+            chmod 400 /opt/secrets/*;
+            chown -R tomcat:root /opt/secrets;
+            chown -R tomcat:root /opt/grouper/grouperWebapp/WEB-INF/classes/*.properties;
+            chmod 400 /opt/grouper/grouperWebapp/WEB-INF/classes/*.properties;
+            /usr/local/bin/entrypoint.sh ui-ws;

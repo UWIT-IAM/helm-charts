@@ -1,0 +1,23 @@
+
+# The domain, either dev, eval, or prod.
+domain: ""
+
+# --- Networking configuration ---
+
+# The host name, e.g. grouper.iamprod.s.uw.edu
+hostname: ""
+tlsSecretName: ""
+
+# --- ConfigMap values ---
+server_name: "localhost"
+grouper_db_host: ""
+grouper_db_name: ""
+ssl_root_cert: "/opt/secrets/server-ca.pem"
+ssl_cert: "/opt/secrets/client-cert.pem"
+ssl_key: "/opt/secrets/client-key.der"
+db_ssl_password_filename: "/opt/secrets/ssl-key-password.txt"
+grouper_tomcat_ajp_port: "8009"
+
+# --- container image tags
+shibboleth_image_tag: ""
+grouper_image_tag: ""
