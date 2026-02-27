@@ -5,7 +5,7 @@ on:
       - 'main'
     paths:
       - 'basic-web-service/Chart.yaml'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
 
@@ -17,8 +17,10 @@ jobs:
 
     steps:
     - uses: 'actions/checkout@v6'
+
     - name: Get latest chart version number
       run: echo "CHART_VERSION=$(cat basic-web-service/Chart.yaml | grep 'version:' | cut -d' ' -f2)" >> $GITHUB_ENV
+
     - name: Check for matching archive
       env:
         ERROR_MISSING_ARCHIVE: "::error:: Couldn't find the file 'charts/basic-web-service-${{ env.CHART_VERSION }}.tgz', did you run './package-chart.sh'?"
@@ -27,17 +29,14 @@ jobs:
         then
           echo $ERROR_MISSING_ARCHIVE && exit 1
         fi
-    - uses: azure/setup-helm@v3
-      with:
-        version: 'latest'
-        token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
+
     - name: 'Authenticate to Google Artifact Registry'
       env:
-        GAR_KEY_BASE64: ${{ secrets.GAR_KEY_BASE64 }}
         REGISTRY_URL_HTTP: "https://${{ env.REGISTRY_HOSTNAME }}"
       run: |
-        echo $GAR_KEY_BASE64 | helm registry login -u _json_key_base64 --password-stdin \
+        echo ${{ secrets.GCR_TOKEN }} | helm registry login -u oauth2accesstoken --password-stdin \
         $REGISTRY_URL_HTTP
+
     - name: 'Check if chart version already exists in registry'
       env:
         CHART_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/containers/charts/basic-web-service"
@@ -49,6 +48,7 @@ jobs:
         else
           echo "::notice:: Uploading new chart with version tag $CHART_VERSION"
         fi
+
     - name: 'Upload chart'
       env:
         REGISTRY_URL_OCI: "oci://${{env.REGISTRY_HOSTNAME}}/uwit-mci-iam/containers/charts"
