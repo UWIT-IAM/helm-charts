@@ -9,6 +9,8 @@ the `helm` CLI to package your change. You must have the `helm` CLI installed.
 
 Don't forget to bump the version in `Chart.yaml`.
 
+Watch out for updates going to the old location rather than here `UWIT-IAM/helm-charts`
+
 ### Publishing your change
 
 A Github Action automatically publishes new charts to Google Artifact Registry. The action runs after every push to `main` if `Chart.yaml` has been modified.
