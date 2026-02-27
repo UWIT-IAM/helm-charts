@@ -1,11 +1,6 @@
 name: Publish Grouper chart to registry
 
 on: 
-  push:
-    branches:
-      - 'main'
-    paths:
-      - 'basic-web-service/Chart.yaml'
   workflow_dispatch: {}
 
 jobs:

@@ -2,16 +2,20 @@ name: Helm chart linter
 
 on:
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/set-up-helm-linter
+      - uses: actions/checkout@v6
       - run: helm lint basic-web-service
-      - uses: actions/setup-go@v4
+
+      - uses: actions/setup-go@v6
         with:
-          go-version: '1.17'
+          # from kubeconform/go.mod, needs to be updated over time...
+          go-version: '1.24'
       - run: go install github.com/yannh/kubeconform/cmd/kubeconform@latest
       - run: helm template basic-web-service | kubeconform --summary --output json

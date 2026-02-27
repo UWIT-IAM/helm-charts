@@ -6,13 +6,17 @@ on:
     paths:
       - 'basic-web-service/Chart.yaml'
   workflow_dispatch: {}
+
 jobs:
+
   publish_chart:
+
     runs-on: ubuntu-latest
     env:
       REGISTRY_HOSTNAME: "us-docker.pkg.dev"
+
     steps:
-    - uses: 'actions/checkout@v3'
+    - uses: 'actions/checkout@v6'
     - name: Get latest chart version number
       run: echo "CHART_VERSION=$(cat basic-web-service/Chart.yaml | grep 'version:' | cut -d' ' -f2)" >> $GITHUB_ENV
     - name: Check for matching archive
