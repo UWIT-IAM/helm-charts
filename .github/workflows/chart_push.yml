@@ -32,7 +32,7 @@ jobs:
 
     - name: 'Authenticate to Google Artifact Registry'
       run: |
-        echo ${{ secrets.MCI_GCLOUD_AUTH_JSON }} | helm registry login -u oauth2accesstoken --password-stdin \
+        echo ${{ secrets.GAR_KEY_BASE64 }} | helm registry login -u _json_key_base64 --password-stdin \
         ${{ env.REGISTRY_HOSTNAME }}
 
     - name: 'Check if chart version already exists in registry'
