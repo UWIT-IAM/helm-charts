@@ -31,11 +31,9 @@ jobs:
         fi
 
     - name: 'Authenticate to Google Artifact Registry'
-      env:
-        REGISTRY_URL_HTTP: "https://${{ env.REGISTRY_HOSTNAME }}"
       run: |
         echo ${{ secrets.GCR_TOKEN }} | helm registry login -u oauth2accesstoken --password-stdin \
-        $REGISTRY_URL_HTTP
+        ${{ env.REGISTRY_HOSTNAME }}
 
     - name: 'Check if chart version already exists in registry'
       env:
